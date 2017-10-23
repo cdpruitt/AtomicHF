@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 
 #include "../include/Eigen/Sparse"
 
@@ -14,21 +15,15 @@ Eigen::VectorXd buildHydrogenicWF(
         const unsigned int& l,
         const int& m,
         const unsigned int& Z,
-        const double& minimum,
-        const double& maximum,
-        const unsigned int& numberOfPoints)
+        const vector<double>& grid)
 {
-    double stepSize = log(maximum/minimum)/(numberOfPoints-1);
-    double radius = 0;
-
-    Eigen::VectorXd wavefunction = Eigen::VectorXd(numberOfPoints,1);
+    Eigen::VectorXd wavefunction = Eigen::VectorXd(grid.size(),1);
 
     if(n==1 && l==0)
     {
-        for(unsigned int i=0; i<numberOfPoints; i++)
+        for(unsigned int i=0; i<grid.size(); i++)
         {
-            radius = log(minimum) + i*stepSize;
-            wavefunction(i) = exp(-(Z/A_0)*radius)
+            wavefunction(i) = exp(-(Z/A_0)*grid[i])
                 *(pow(Z/A_0,1.5)/(sqrt(PI)));
         }
     }
@@ -37,11 +32,10 @@ Eigen::VectorXd buildHydrogenicWF(
     {
         if(l==0)
         {
-            for(unsigned int i=0; i<numberOfPoints; i++)
+            for(unsigned int i=0; i<grid.size(); i++)
             {
-                radius = log(minimum) + i*stepSize;
-                wavefunction(i) = exp(-(Z/(2*A_0))*radius)
-                    *(2-(Z/A_0)*radius)
+                wavefunction(i) = exp(-(Z/(2*A_0))*grid[i])
+                    *(2-(Z/A_0)*grid[i])
                     *pow(Z/A_0,1.5)
                     /(4*sqrt(2*PI));
             }

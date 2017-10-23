@@ -4,11 +4,14 @@
 
 #include "../include/Eigen/Sparse"
 #include "../include/buildHydrogenicWF.h"
+#include "../include/mathFunctions.h"
 
 #include "TFile.h"
 #include "TGraph.h"
 
 using namespace std;
+
+const double CONVERGENCE_LIMIT = 0.99;
 
 int main(int argc, char** argv)
 {
@@ -27,31 +30,68 @@ int main(int argc, char** argv)
 
     const double stepSize = log(gridMaximum/gridMinimum)/(numberOfPoints-1);
 
-    vector<Eigen::VectorXd> initialWFs; // starting point for calculation of all electron wavefunctions
+    vector<double> grid;
+
+    for(int i=0; i<numberOfPoints; i++)
+    {
+        grid.push_back(gridMinimum+i*stepSize);
+    }
+
+    vector<Eigen::VectorXd> wavefunctions; // starting point for calculation of all electron wavefunctions
 
     // hardcoding initial conditions for helium
-    initialWFs.push_back(buildHydrogenicWF(1, 0, 0, Z, gridMinimum, gridMaximum, numberOfPoints));
-    initialWFs.push_back(buildHydrogenicWF(1, 0, 0, Z, gridMinimum, gridMaximum, numberOfPoints));
-    initialWFs.push_back(buildHydrogenicWF(2, 0, 0, Z, gridMinimum, gridMaximum, numberOfPoints));
-    initialWFs.push_back(buildHydrogenicWF(2, 0, 0, Z, gridMinimum, gridMaximum, numberOfPoints));
+    wavefunctions.push_back(buildHydrogenicWF(1, 0, 0, Z, grid));
+    wavefunctions.push_back(buildHydrogenicWF(1, 0, 0, Z, grid));
+    wavefunctions.push_back(buildHydrogenicWF(2, 0, 0, Z, grid));
+    wavefunctions.push_back(buildHydrogenicWF(2, 0, 0, Z, grid));
+
+    // perform HF calculation until wavefunctions show convergence within some prescribed limit
+
+    double eigenvalue = 0;
+
+    vector<Eigen::VectorXd> KETerms;
+
+    for(auto& wf : wavefunctions)
+    {
+        KETerms.push_back(calculateKineticEnergyTerm(grid, wf, 0));
+        //directTermSum += calculateExternalPotentialTerm(wf);
+        //directTermSum += calculateHartreeTerm(wf);
+
+        //calculateFockTerm(wf);
+    }
 
     TFile* outputFile = new TFile("output.root", "RECREATE");
 
     // plot initial wavefunctions
-    for(unsigned int i=0; i<initialWFs.size(); i++)
+    for(unsigned int i=0; i<wavefunctions.size(); i++)
     {
         // extract info into vector
-        vector<double> position;
         vector<double> value;
 
-        for(unsigned int j=0; j<initialWFs[i].rows(); j++)
+        for(unsigned int j=0; j<wavefunctions[i].rows(); j++)
         {
-            position.push_back(log(gridMinimum) + j*stepSize);
-            value.push_back(initialWFs[i](j));
+            value.push_back(wavefunctions[i](j));
         }
 
-        TGraph* graph = new TGraph(numberOfPoints, &position[0], &value[0]);
+        TGraph* graph = new TGraph(grid.size(), &grid[0], &value[0]);
         string name = "Electron " + to_string(i);
+        graph->SetNameTitle(name.c_str(), name.c_str());
+        graph->Write();
+    }
+
+    // plot KETerm
+    for(unsigned int i=0; i<KETerms.size(); i++)
+    {
+        // extract info into vector
+        vector<double> value;
+
+        for(unsigned int j=0; j<KETerms[i].rows(); j++)
+        {
+            value.push_back(KETerms[i](j));
+        }
+
+        TGraph* graph = new TGraph(grid.size(), &grid[0], &value[0]);
+        string name = "KETerm " + to_string(i);
         graph->SetNameTitle(name.c_str(), name.c_str());
         graph->Write();
     }
