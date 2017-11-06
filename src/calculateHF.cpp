@@ -37,27 +37,24 @@ int main(int argc, char** argv)
         grid.push_back(gridMinimum+i*stepSize);
     }
 
-    vector<Eigen::VectorXd> wavefunctions; // starting point for calculation of all electron wavefunctions
+    vector<Wavefunction> wavefunctions; // starting point for calculation of all electron wavefunctions
 
     // hardcoding initial conditions for helium
-    wavefunctions.push_back(buildHydrogenicWF(1, 0, 0, Z, grid));
-    wavefunctions.push_back(buildHydrogenicWF(1, 0, 0, Z, grid));
-    wavefunctions.push_back(buildHydrogenicWF(2, 0, 0, Z, grid));
-    wavefunctions.push_back(buildHydrogenicWF(2, 0, 0, Z, grid));
+    wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
+    wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
+    wavefunctions.push_back(Wavefunction(2, 0, 0, Z, grid));
+    wavefunctions.push_back(Wavefunction(2, 0, 0, Z, grid));
 
     // perform HF calculation until wavefunctions show convergence within some prescribed limit
 
     double eigenvalue = 0;
 
-    vector<Eigen::VectorXd> KETerms;
-
     for(auto& wf : wavefunctions)
     {
-        KETerms.push_back(calculateKineticEnergyTerm(grid, wf, 0));
-        //directTermSum += calculateExternalPotentialTerm(wf);
-        //directTermSum += calculateHartreeTerm(wf);
-
-        //calculateFockTerm(wf);
+        double KETerm = calculateKineticEnergyTerm(wf);
+        double EPTerm = calculateExternalPotentialTerm(wf);
+        double HartreeTerm = calculateHartreeTerm(wf, wavefunctions);
+        //double FockTerm = calculateFockTerm(wf, wavefunctions);
     }
 
     TFile* outputFile = new TFile("output.root", "RECREATE");

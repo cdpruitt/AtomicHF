@@ -2,7 +2,7 @@
 
 using namespace std;
 
-Eigen::VectorXd calculateKineticEnergyTerm(const vector<double>& grid, const Eigen::VectorXd& wf, const unsigned int& l)
+double calculateKineticEnergyTerm(const Wavefunction& wf)
 {
     Eigen::VectorXd KETerm(wf.size(), 1);
 
@@ -42,10 +42,10 @@ Eigen::VectorXd calculateKineticEnergyTerm(const vector<double>& grid, const Eig
     KETerm(n) += pow(l+0.5,2)/pow(r[n],2);
     KETerm(n) *= -0.5;
 
-    return KETerm;
+    return result;
 }
 
-Eigen::VectorXd calculateExternalPotentialTerm(const vector<double>& grid, const Eigen::VectorXd& wf, const unsigned int& Z)
+double calculateExternalPotentialTerm(const Wavefunction& wf)
 {
     Eigen::VectorXd EPTerm(wf.size(), 1);
 
@@ -61,10 +61,10 @@ Eigen::VectorXd calculateExternalPotentialTerm(const vector<double>& grid, const
         EPTerm(i) = Z/r[i];
     }
 
-    return EPTerm;
+    return result;
 }
 
-Eigen::VectorXd calculateHartreeTerm(const vector<double>& grid, const Eigen::VectorXd& wf, const unsigned int& n, const unsigned int& l)
+double calculateHartreeTerm(const Wavefunction& wf, const vector<Wavefunctions> wavefunctions)
 {
     Eigen::VectorXd HTerm(wf.size(), 1);
 
@@ -77,22 +77,35 @@ Eigen::VectorXd calculateHartreeTerm(const vector<double>& grid, const Eigen::Ve
 
     double stepSize = log((r[r.size()-1])/r[0])/(r.size()-1);
 
-    double W = 0;
+    vector<double> V;
+    vector<double> W;
+
+    V.push_back(0);
+    W.push_back(0);
 
     for(unsigned int i=0; i<grid.size(); i++)
     {
-        double argument = 0;
-
-        for(unsigned int n_prime=0; n_prime<=n; n_prime++)
-        {
-            for(unsigned int l_prime=0; l_prime<=l; l_prime++)
-            {
-                W = W + 2*(2*l_prime+1)*wf(i);
-            }
-        }
-
-        HTerm(i) = stepSize*(W/r[i]);
+        V.push_back(V.back() + pow(wf(i),2));
+        W.push_back(W.back() + pow(wf(i),2)/r[i]);
     }
 
-    return HTerm;
+    for(unsigned int i=0; i<grid.size(); i++)
+    {
+        HTerm(i) = stepSize*(V[i+1]/r[i] + W[grid.size()]-W[i+1]);
+    }
+
+    for(unsigned int n_prime=0; n_prime<=n; n_prime++)
+    {
+        for(unsigned int l_prime=0; l_prime<=l; l_prime++)
+        {
+            2*(2*l_prime+1)*
+        }
+    }
+
+    return result;
+}
+
+double calculateFockTerm(const Wavefunction& wf, const vector<Wavefunctions> wavefunctions)
+{
+    return result;
 }
