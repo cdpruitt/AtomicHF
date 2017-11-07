@@ -3,6 +3,75 @@
 
 using namespace std;
 
+/*Eigen::MatrixXd constructHamiltonian(Wavefunction wf, Eigen::VectorXd grid)
+{
+    Eigen::MatrixXd Hamiltonian = Eigen::MatrixXd(grid.size(), grid.size());
+
+    for(unsigned int i=0; i<grid.size(); i++)
+    {
+        Hamiltonian(i,i) += wf.Z/exp(grid(i)); // external potential term
+        Hamiltonian(i,i) +=  ; // Hartree term
+
+        Hamiltonian(i,i-1) += ; // kinetic term
+        Hamiltonian(i,i) += ; // kinetic term
+        Hamiltonian(i,i+1) += ; // kinetic term
+    }
+}*/
+
+double calculateKineticEnergyTerm(const Wavefunction& wf, unsigned int i)
+{
+    double result = 0;
+
+    // identify relevant grid values
+    double r_prev;
+    double r_0;
+    double r_next;
+
+    double wf_prev;
+    double wf_0;
+    double wf_next;
+
+    if(i==0)
+    {
+        r_prev = exp(wf.grid(i+1));
+        wf_prev = exp(wf.values(i+1));
+    }
+
+    else
+    {
+        r_prev = exp(wf.grid(i-1));
+        wf_prev = exp(wf.values(i-1));
+    }
+
+    if(i==wf.grid.size()-1)
+    {
+        r_next = exp(wf.grid(i-1));
+        wf_next = exp(wf.values(i-1));
+    }
+
+    else
+    {
+        r_next = exp(wf.grid(i+1));
+        wf_next = exp(wf.values(i+1));
+    }
+
+    r_0 = exp(wf.grid(i));
+    wf_0 = exp(wf.values(i));
+
+    double stepSize = wf.grid(1)-wf.grid(0);
+
+    result = -2*wf_0/pow(r_0,2) +
+        wf_next/(r_0*r_next) +
+        wf_prev/(r_0*r_prev);
+
+    result /= pow(stepSize,2);
+
+    result += pow(wf.l+0.5,2)/pow(r_0,2);
+    result *= -0.5;
+
+    return result;
+}
+
 Eigen::VectorXd calculateKineticEnergyTerm(const Wavefunction& wf)
 {
     Eigen::VectorXd KETerm(wf.grid.size(), 1);
@@ -88,21 +157,20 @@ Eigen::VectorXd calculateHartreeTerm(const Wavefunction& wf, const vector<Wavefu
 
     for(unsigned int i=0; i<wf.grid.size(); i++)
     {
-        V.push_back(V.back() + pow(wf.values(i),2));
-        W.push_back(W.back() + pow(wf.values(i),2)/r(i));
+        double G = 0;
+
+        for(auto& wf_prime : wavefunctions)
+        {
+            G += 2*(2*wf_prime.l+1)*pow(wf.values(i),2);
+        }
+
+        V.push_back(V.back() + G);
+        W.push_back(W.back() + G/r(i));
     }
 
     for(unsigned int i=0; i<wf.grid.size(); i++)
     {
         HTerm(i) = stepSize*(V[i+1]/r(i) + W[wf.grid.size()]-W[i+1]);
-    }
-
-    for(unsigned int n_prime=0; n_prime<=wf.n; n_prime++)
-    {
-        for(unsigned int l_prime=0; l_prime<=wf.l; l_prime++)
-        {
-            //HTerm(i) *= 2*(2*l_prime+1)
-        }
     }
 
     return HTerm;

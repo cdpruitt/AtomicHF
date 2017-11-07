@@ -13,4 +13,5 @@ Wavefunction::Wavefunction(
     : n(_n), l(_l), m(_m), Z(_Z), grid(_grid)
 {
     values = buildHydrogenicWF(n, l, m, Z, grid);
+    converged = false;
 }

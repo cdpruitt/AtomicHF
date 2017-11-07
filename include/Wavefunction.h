@@ -21,6 +21,8 @@ class Wavefunction
         unsigned int l; // angular momentum quantum number
         unsigned int m; // angular momentum z-projection
         unsigned int Z; // charge of nucleus for the problem of interest
+
+        bool converged; // flag indicating whether this wavefunction's solution has converged
 };
 
 #endif /* WAVEFUNCTION_H */
