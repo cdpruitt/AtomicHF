@@ -10,6 +10,6 @@ Eigen::VectorXd buildHydrogenicWF(
         const unsigned int& l,
         const int& m,
         const unsigned int& Z,
-        const std::vector<double>& grid);
+        const Eigen::VectorXd& grid);
 
 #endif /* BUILD_HYDROGENIC_WF */

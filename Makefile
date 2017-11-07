@@ -19,7 +19,7 @@ TARGETS = calculateHF
 all: $(addprefix $(BIN), $(TARGETS))
 
 # Build driver (main data analysis engine)
-CALCULATE_HF_SOURCES = calculateHF.cpp buildHydrogenicWF.cpp mathFunctions.cpp
+CALCULATE_HF_SOURCES = calculateHF.cpp buildHydrogenicWF.cpp mathFunctions.cpp Wavefunction.cpp
 $(BIN)calculateHF: $(addprefix $(SOURCE), $(CALCULATE_HF_SOURCES))
 	$(COMPILER) $(CFLAGS) -o $(BIN)calculateHF $(addprefix $(SOURCE), $(CALCULATE_HF_SOURCES)) $(LINKOPTION)
 

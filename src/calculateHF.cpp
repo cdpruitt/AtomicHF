@@ -5,6 +5,7 @@
 #include "../include/Eigen/Sparse"
 #include "../include/buildHydrogenicWF.h"
 #include "../include/mathFunctions.h"
+#include "../include/Wavefunction.h"
 
 #include "TFile.h"
 #include "TGraph.h"
@@ -12,6 +13,35 @@
 using namespace std;
 
 const double CONVERGENCE_LIMIT = 0.99;
+
+void plot(Eigen::VectorXd grid, Eigen::VectorXd values, string name)
+{
+    // extract info into std::vectors for plotting
+    vector<double> dummyGrid;
+    vector<double> dummyValues;
+
+    for(unsigned int i=0; i<values.size(); i++)
+    {
+        dummyGrid.push_back(grid(i));
+        dummyValues.push_back(values(i));
+    }
+
+    TGraph* graph = new TGraph(dummyGrid.size(), &dummyGrid[0], &dummyValues[0]);
+    graph->SetNameTitle(name.c_str(), name.c_str());
+    graph->Write();
+}
+
+double integrate(Eigen::VectorXd values, double stepSize)
+{
+    double result = 0;
+
+    for(unsigned int i=0; i<values.size(); i++)
+    {
+        result += values(i)*stepSize;
+    }
+
+    return result;
+}
 
 int main(int argc, char** argv)
 {
@@ -22,6 +52,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    TFile* outputFile = new TFile("output.root", "RECREATE");
+
     unsigned int Z = stoi(argv[1]); // Z of nucleus
 
     const double gridMinimum = pow(10,-7)/Z;
@@ -30,11 +62,12 @@ int main(int argc, char** argv)
 
     const double stepSize = log(gridMaximum/gridMinimum)/(numberOfPoints-1);
 
-    vector<double> grid;
+    // initialize grid
+    Eigen::VectorXd grid = Eigen::VectorXd(numberOfPoints,1);
 
     for(int i=0; i<numberOfPoints; i++)
     {
-        grid.push_back(gridMinimum+i*stepSize);
+        grid(i) = gridMinimum+i*stepSize;
     }
 
     vector<Wavefunction> wavefunctions; // starting point for calculation of all electron wavefunctions
@@ -42,55 +75,27 @@ int main(int argc, char** argv)
     // hardcoding initial conditions for helium
     wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
     wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
-    wavefunctions.push_back(Wavefunction(2, 0, 0, Z, grid));
-    wavefunctions.push_back(Wavefunction(2, 0, 0, Z, grid));
-
-    // perform HF calculation until wavefunctions show convergence within some prescribed limit
-
-    double eigenvalue = 0;
 
     for(auto& wf : wavefunctions)
     {
-        double KETerm = calculateKineticEnergyTerm(wf);
-        double EPTerm = calculateExternalPotentialTerm(wf);
-        double HartreeTerm = calculateHartreeTerm(wf, wavefunctions);
+        Eigen::VectorXd KETerm = calculateKineticEnergyTerm(wf);
+        Eigen::VectorXd EPTerm = calculateExternalPotentialTerm(wf);
+        Eigen::VectorXd HartreeTerm = calculateHartreeTerm(wf, wavefunctions);
         //double FockTerm = calculateFockTerm(wf, wavefunctions);
-    }
 
-    TFile* outputFile = new TFile("output.root", "RECREATE");
+        plot(wf.grid, KETerm, "KETerm");
+        plot(wf.grid, EPTerm, "EPTerm");
+        plot(wf.grid, HartreeTerm, "HartreeTerm");
+
+        double eigenvalue = integrate(KETerm, stepSize) - integrate(EPTerm, stepSize);// - integrate(HartreeTerm, grid);
+        cout << eigenvalue << endl;
+    }
 
     // plot initial wavefunctions
     for(unsigned int i=0; i<wavefunctions.size(); i++)
     {
-        // extract info into vector
-        vector<double> value;
-
-        for(unsigned int j=0; j<wavefunctions[i].rows(); j++)
-        {
-            value.push_back(wavefunctions[i](j));
-        }
-
-        TGraph* graph = new TGraph(grid.size(), &grid[0], &value[0]);
-        string name = "Electron " + to_string(i);
-        graph->SetNameTitle(name.c_str(), name.c_str());
-        graph->Write();
-    }
-
-    // plot KETerm
-    for(unsigned int i=0; i<KETerms.size(); i++)
-    {
-        // extract info into vector
-        vector<double> value;
-
-        for(unsigned int j=0; j<KETerms[i].rows(); j++)
-        {
-            value.push_back(KETerms[i](j));
-        }
-
-        TGraph* graph = new TGraph(grid.size(), &grid[0], &value[0]);
-        string name = "KETerm " + to_string(i);
-        graph->SetNameTitle(name.c_str(), name.c_str());
-        graph->Write();
+        string name = "Electron" + to_string(i);
+        plot(wavefunctions[i].grid, wavefunctions[i].values, name);
     }
 
     outputFile->Close();

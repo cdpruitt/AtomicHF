@@ -1,6 +1,8 @@
 #ifndef WAVEFUNCTION_H
 #define WAVEFUNCTION_H
 
+#include "../include/Eigen/Sparse"
+
 class Wavefunction
 {
     public:
@@ -19,6 +21,6 @@ class Wavefunction
         unsigned int l; // angular momentum quantum number
         unsigned int m; // angular momentum z-projection
         unsigned int Z; // charge of nucleus for the problem of interest
-}
+};
 
 #endif /* WAVEFUNCTION_H */

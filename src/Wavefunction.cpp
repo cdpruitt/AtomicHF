@@ -1,3 +1,4 @@
+#include "../include/Wavefunction.h"
 #include "../include/buildHydrogenicWF.h"
 
 using namespace std;
