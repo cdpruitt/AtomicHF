@@ -23,8 +23,9 @@ Eigen::VectorXd buildHydrogenicWF(
     {
         for(unsigned int i=0; i<grid.size(); i++)
         {
-            wavefunction(i) = exp(-(Z/A_0)*grid(i))
-                *(pow(Z/A_0,1.5)/(sqrt(PI)));
+            double r = exp(grid[i]);
+            wavefunction(i) = pow(r, 1.5)*exp(-r*(Z/A_0))
+                *2*pow(Z/A_0,1.5);
         }
     }
 

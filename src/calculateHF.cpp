@@ -22,7 +22,7 @@ void plot(Eigen::VectorXd grid, Eigen::VectorXd values, string name)
 
     for(unsigned int i=0; i<values.size(); i++)
     {
-        dummyGrid.push_back(grid(i));
+        dummyGrid.push_back(exp(grid(i)));
         dummyValues.push_back(values(i));
     }
 
@@ -112,16 +112,16 @@ int main(int argc, char** argv)
     // define constants
     unsigned int Z = stoi(argv[1]); // Z of nucleus
 
-    const double gridMinimum = pow(10,-7)/Z;
-    const double gridMaximum = 25;
+    const double gridMinimum = log(pow(10,-7)/Z);
+    const double gridMaximum = log(25);
     const unsigned int numberOfPoints = 1000;
 
-    const double stepSize = log(gridMaximum/gridMinimum)/(numberOfPoints-1);
+    const double stepSize = (gridMaximum-gridMinimum)/(numberOfPoints-1);
 
     // initialize grid
     Eigen::VectorXd grid = Eigen::VectorXd(numberOfPoints,1);
 
-    for(int i=0; i<numberOfPoints; i++)
+    for(unsigned int i=0; i<numberOfPoints; i++)
     {
         grid(i) = gridMinimum+i*stepSize;
     }
@@ -157,7 +157,7 @@ int main(int argc, char** argv)
 
             double eigenvalue =
                 integrate(KETerm, wf.values, stepSize)
-              - integrate(EPTerm, wf.values, stepSize)
+              + integrate(EPTerm, wf.values, stepSize)
               + integrate(HartreeTerm, wf.values, stepSize);
 
             cout << "Eigenvalue = " << eigenvalue << endl;

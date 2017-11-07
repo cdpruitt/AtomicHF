@@ -10,7 +10,7 @@ Wavefunction::Wavefunction(
         const unsigned int& _Z,
         const Eigen::VectorXd& _grid
         )
-    : n(_n), l(_l), m(_m), Z(_Z), grid(_grid)
+    : grid(_grid), n(_n), l(_l), m(_m), Z(_Z)
 {
     values = buildHydrogenicWF(n, l, m, Z, grid);
     converged = false;
