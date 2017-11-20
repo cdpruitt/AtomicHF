@@ -138,10 +138,15 @@ int main(int argc, char** argv)
     wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
     wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
 
+    vector<Wavefunction> nlWavefunctions;
+    nlWavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
+
     bool allConverged = false;
 
+    unsigned int counter = 0;
+
     // iterate wavefunctions until they converge
-    while(true)
+    while(counter<3)
     {
         // plot initial wavefunctions
         for(unsigned int i=0; i<wavefunctions.size(); i++)
@@ -157,7 +162,7 @@ int main(int argc, char** argv)
             Eigen::VectorXd KETerm = calculateKineticEnergyTerm(wf);
             Eigen::VectorXd EPTerm = calculateExternalPotentialTerm(wf);
             Eigen::VectorXd HartreeTerm = calculateHartreeTerm(wf, wavefunctions);
-            Eigen::VectorXd FockTerm = calculateFockTerm(wf, wavefunctions);
+            Eigen::VectorXd FockTerm = calculateFockTerm(wf, nlWavefunctions);
 
             plot(wf.grid, KETerm, "KETerm");
             plot(wf.grid, EPTerm, "EPTerm");
@@ -219,6 +224,8 @@ int main(int argc, char** argv)
         {
             wavefunctions[i].values = newWavefunctions[i];
         }
+
+        counter++;
     }
 
     outputFile->Close();
