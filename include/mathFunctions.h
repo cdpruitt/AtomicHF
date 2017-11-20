@@ -10,5 +10,6 @@ Eigen::VectorXd calculateKineticEnergyTerm(const Wavefunction& wf);
 Eigen::VectorXd calculateSpinOrbitTerm(const Wavefunction& wf);
 Eigen::VectorXd calculateExternalPotentialTerm(const Wavefunction& wf);
 Eigen::VectorXd calculateHartreeTerm(const Wavefunction& wf, const std::vector<Wavefunction>& wavefunctions);
+Eigen::VectorXd calculateFockTerm(const Wavefunction& wf, const std::vector<Wavefunction>& wavefunctions);
 
 #endif /* MATH_FUNCTIONS_H */

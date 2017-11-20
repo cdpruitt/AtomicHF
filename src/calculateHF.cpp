@@ -3,6 +3,8 @@
 #include <vector>
 
 #include "../include/Eigen/Sparse"
+#include "../include/Eigen/Dense"
+#include "../include/Eigen/Eigenvalues"
 #include "../include/buildHydrogenicWF.h"
 #include "../include/mathFunctions.h"
 #include "../include/Wavefunction.h"
@@ -55,7 +57,12 @@ Eigen::VectorXd normalize(Eigen::VectorXd values, double stepSize)
 {
     Eigen::VectorXd result(values.size(),1);
 
-    double norm = integrate(values, values, stepSize);
+    double norm = 0;
+
+    for(unsigned int i=0; i<values.size(); i++)
+    {
+        norm += values(i)*values(i)*stepSize;
+    }
 
     if(norm<0)
     {
@@ -131,41 +138,74 @@ int main(int argc, char** argv)
     wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
     wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
 
-    // plot initial wavefunctions
-    for(unsigned int i=0; i<wavefunctions.size(); i++)
-    {
-        string name = "Electron" + to_string(i);
-        plot(wavefunctions[i].grid, wavefunctions[i].values, name);
-    }
-
     bool allConverged = false;
-    vector<Eigen::VectorXd> newWavefunctions;
 
     // iterate wavefunctions until they converge
-    while(!allConverged)
+    while(true)
     {
+        // plot initial wavefunctions
+        for(unsigned int i=0; i<wavefunctions.size(); i++)
+        {
+            string name = "Electron" + to_string(i);
+            plot(wavefunctions[i].grid, wavefunctions[i].values, name);
+        }
+
+        vector<Eigen::VectorXd> newWavefunctions;
+
         for(auto& wf : wavefunctions)
         {
             Eigen::VectorXd KETerm = calculateKineticEnergyTerm(wf);
             Eigen::VectorXd EPTerm = calculateExternalPotentialTerm(wf);
             Eigen::VectorXd HartreeTerm = calculateHartreeTerm(wf, wavefunctions);
-            //double FockTerm = calculateFockTerm(wf, wavefunctions);
+            Eigen::VectorXd FockTerm = calculateFockTerm(wf, wavefunctions);
 
             plot(wf.grid, KETerm, "KETerm");
             plot(wf.grid, EPTerm, "EPTerm");
             plot(wf.grid, HartreeTerm, "HartreeTerm");
+            plot(wf.grid, FockTerm, "FockTerm");
 
-            double eigenvalue =
-                integrate(KETerm, wf.values, stepSize)
-              + integrate(EPTerm, wf.values, stepSize)
-              + integrate(HartreeTerm, wf.values, stepSize);
+            double KEValue = integrate(KETerm, wf.values, stepSize);
+            double EPValue = integrate(EPTerm, wf.values, stepSize);
+            double HValue = integrate(HartreeTerm, wf.values, stepSize);
+            double FValue = integrate(FockTerm, wf.values, stepSize);
+
+            double eigenvalue = KEValue + EPValue + HValue - FValue;
+
+            cout << "KEValue = " << KEValue << ", EPValue = " << EPValue
+                << ", HValue = " << HValue << ", FValue = " << FValue << endl;
 
             cout << "Eigenvalue = " << eigenvalue << endl;
 
-            newWavefunctions.push_back(normalize(wf.values, stepSize));
+            if(eigenvalue>0)
+            {
+                eigenvalue = 0;
+            }
+
+            //Eigen::MatrixXd Hamiltonian = Eigen::MatrixXd(numberOfPoints, numberOfPoints);
+
+            Eigen::VectorXd inverseVector = Eigen::VectorXd(numberOfPoints,1);
+            Eigen::VectorXd unnormalizedNewWF = Eigen::VectorXd(numberOfPoints,1);
+
+            for(unsigned int i=0; i<numberOfPoints; i++)
+            {
+                inverseVector(i) = 1/(KETerm(i) + EPTerm(i) + HartreeTerm(i) - eigenvalue);
+                unnormalizedNewWF(i) = inverseVector(i)*FockTerm(i);
+            }
+
+            //Eigen::MatrixXd inverse = Hamiltonian.inverse();
+            /*for(unsigned int i=0; i<numberOfPoints; i++)
+            {
+                inverseVector(i) = inverse(i,i);
+            }*/
+
+            plot(wf.grid, inverseVector, "inverseVector");
+
+            plot(wf.grid, unnormalizedNewWF, "unnormalizedNewWavefunction");
+
+            newWavefunctions.push_back(normalize(unnormalizedNewWF, stepSize));
             plot(wf.grid, newWavefunctions.back(), "newWavefunction");
 
-            wf.converged = testConvergence(wf.values, newWavefunctions.back(), stepSize);
+            //wf.converged = testConvergence(wf.values, newWavefunctions.back(), stepSize);
         }
 
         allConverged = true;

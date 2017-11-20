@@ -103,26 +103,57 @@ Eigen::VectorXd calculateHartreeTerm(const Wavefunction& wf, const vector<Wavefu
 
         for(auto& wf_prime : wavefunctions)
         {
-            if(&wf==&wf_prime)
-            {
-                continue;
-            }
-
             G += pow(wf_prime.values(i),2);
+        }
+
+        V.push_back(V.back() + G);
+        W.push_back(W.back() + G/r(i));
+    }
+
+    for(unsigned int i=0; i<wf.grid.size(); i++)
+    {
+        HTerm(i) = stepSize*(V[i+1]/r(i) + W[wf.grid.size()]-W[i+1]);
+    }
+
+    return HTerm;
+}
+
+Eigen::VectorXd calculateFockTerm(const Wavefunction& wf, const vector<Wavefunction>& wavefunctions)
+{
+    Eigen::VectorXd FTerm(wf.values.size(), 1);
+    Eigen::VectorXd r(wf.grid.size(), 1);
+
+    for(unsigned int i=0; i<wf.grid.size(); i++)
+    {
+        r(i) = exp(wf.grid(i));
+    }
+
+    double stepSize = wf.grid(1)-wf.grid(0);
+
+    vector<double> V;
+    vector<double> W;
+
+    V.push_back(0);
+    W.push_back(0);
+
+    for(unsigned int i=0; i<wf.grid.size(); i++)
+    {
+        double G = 0;
+
+        for(auto& wf_prime : wavefunctions)
+        {
+            G += wf_prime.values(i)*wf.values(i);
         }
 
         V.push_back(V.back() + G*r(i));
         W.push_back(W.back() + G/r(i));
     }
 
+    //for(unsigned int L=0; L<
     for(unsigned int i=0; i<wf.grid.size(); i++)
     {
-        HTerm(i) = stepSize*(V[i+1]/r(i) + r(i)*W[wf.grid.size()]-W[i+1]);
+        FTerm(i) = stepSize*(V[i+1]/r(i) + r(i)*(W[wf.grid.size()]-W[i+1]));
     }
 
-    return HTerm;
+    return FTerm;
 }
-
-/*double calculateFockTerm(const Wavefunction& wf, const vector<Wavefunctions> wavefunctions)
-{
-}*/
