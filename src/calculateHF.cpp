@@ -14,7 +14,7 @@
 
 using namespace std;
 
-const double CONVERGENCE_LIMIT = 0.99;
+const double CONVERGENCE_LIMIT = 0.9999;
 
 void plot(Eigen::VectorXd grid, Eigen::VectorXd values, string name)
 {
@@ -72,8 +72,6 @@ Eigen::VectorXd normalize(Eigen::VectorXd values, double stepSize)
 
     norm = sqrt(norm);
 
-    cout << "Norm of wavefunction = " << norm << endl;
-
     for(unsigned int i=0; i<result.size(); i++)
     {
         result(i) = values(i)/norm;
@@ -92,17 +90,9 @@ bool testConvergence(Eigen::VectorXd wf1, Eigen::VectorXd wf2, double stepSize)
         exit(1);
     }
 
-    double norm = integrate(wf1, wf2, stepSize);
+    double result = integrate(wf1, wf2, stepSize);
 
-    if(norm<0)
-    {
-        cerr << "Error: norm of wavefunction cannot be negative." << endl;
-        exit(1);
-    }
-
-    norm = sqrt(norm);
-
-    return norm>CONVERGENCE_LIMIT;
+    return (result>CONVERGENCE_LIMIT && result<(2-CONVERGENCE_LIMIT));
 }
 
 int main(int argc, char** argv)
@@ -135,21 +125,48 @@ int main(int argc, char** argv)
 
     // initialize wavefunctions
     vector<Wavefunction> wavefunctions;
-    wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
-    wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
-
     vector<Wavefunction> nlWavefunctions;
-    nlWavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
 
-    bool allConverged = false;
+    if(Z==2)
+    {
+        wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
+        wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
+
+        nlWavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
+    }
+
+    if(Z==10)
+    {
+        wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
+        wavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
+
+        wavefunctions.push_back(Wavefunction(2, 0, 0, Z, grid));
+        wavefunctions.push_back(Wavefunction(2, 0, 0, Z, grid));
+
+        wavefunctions.push_back(Wavefunction(2, 1, -1, Z, grid));
+        wavefunctions.push_back(Wavefunction(2, 1, -1, Z, grid));
+
+        wavefunctions.push_back(Wavefunction(2, 1, 0, Z, grid));
+        wavefunctions.push_back(Wavefunction(2, 1, 0, Z, grid));
+
+        wavefunctions.push_back(Wavefunction(2, 1, 1, Z, grid));
+        wavefunctions.push_back(Wavefunction(2, 1, 1, Z, grid));
+
+        nlWavefunctions.push_back(Wavefunction(1, 0, 0, Z, grid));
+        nlWavefunctions.push_back(Wavefunction(2, 0, 0, Z, grid));
+        nlWavefunctions.push_back(Wavefunction(2, 1, -1, Z, grid));
+        nlWavefunctions.push_back(Wavefunction(2, 1, 0, Z, grid));
+        nlWavefunctions.push_back(Wavefunction(2, 1, 1, Z, grid));
+    }
 
     unsigned int counter = 0;
+    bool allConverged = false;
 
     // iterate wavefunctions until they converge
-    while(counter<3)
+    while(!allConverged)
     {
         // plot initial wavefunctions
-        for(unsigned int i=0; i<wavefunctions.size(); i++)
+        for(unsigned int i=0; i<wavefunctions.size(); i += 2)
         {
             string name = "Electron" + to_string(i);
             plot(wavefunctions[i].grid, wavefunctions[i].values, name);
@@ -164,53 +181,33 @@ int main(int argc, char** argv)
             Eigen::VectorXd HartreeTerm = calculateHartreeTerm(wf, wavefunctions);
             Eigen::VectorXd FockTerm = calculateFockTerm(wf, nlWavefunctions);
 
-            plot(wf.grid, KETerm, "KETerm");
-            plot(wf.grid, EPTerm, "EPTerm");
-            plot(wf.grid, HartreeTerm, "HartreeTerm");
-            plot(wf.grid, FockTerm, "FockTerm");
+            //plot(wf.grid, KETerm, "KETerm");
+            //plot(wf.grid, EPTerm, "EPTerm");
+            //plot(wf.grid, HartreeTerm, "HartreeTerm");
+            //plot(wf.grid, FockTerm, "FockTerm");
 
             double KEValue = integrate(KETerm, wf.values, stepSize);
             double EPValue = integrate(EPTerm, wf.values, stepSize);
             double HValue = integrate(HartreeTerm, wf.values, stepSize);
             double FValue = integrate(FockTerm, wf.values, stepSize);
 
-            double eigenvalue = KEValue + EPValue + HValue - FValue;
+            wf.eigenvalue = KEValue + EPValue + HValue - FValue;
 
             cout << "KEValue = " << KEValue << ", EPValue = " << EPValue
-                << ", HValue = " << HValue << ", FValue = " << FValue << endl;
+                 << ", HValue = " << HValue << ", FValue = " << FValue << endl;
 
-            cout << "Eigenvalue = " << eigenvalue << endl;
-
-            if(eigenvalue>0)
+            if(wf.eigenvalue>0)
             {
-                eigenvalue = 0;
+                wf.eigenvalue = 0;
             }
 
-            //Eigen::MatrixXd Hamiltonian = Eigen::MatrixXd(numberOfPoints, numberOfPoints);
+            Eigen::VectorXd unnormalizedNewWF = solveTridiagonalMatrix(wf, wavefunctions, FockTerm, wf.eigenvalue);
 
-            Eigen::VectorXd inverseVector = Eigen::VectorXd(numberOfPoints,1);
-            Eigen::VectorXd unnormalizedNewWF = Eigen::VectorXd(numberOfPoints,1);
-
-            for(unsigned int i=0; i<numberOfPoints; i++)
-            {
-                inverseVector(i) = 1/(KETerm(i) + EPTerm(i) + HartreeTerm(i) - eigenvalue);
-                unnormalizedNewWF(i) = inverseVector(i)*FockTerm(i);
-            }
-
-            //Eigen::MatrixXd inverse = Hamiltonian.inverse();
-            /*for(unsigned int i=0; i<numberOfPoints; i++)
-            {
-                inverseVector(i) = inverse(i,i);
-            }*/
-
-            plot(wf.grid, inverseVector, "inverseVector");
-
-            plot(wf.grid, unnormalizedNewWF, "unnormalizedNewWavefunction");
+            //plot(wf.grid, unnormalizedNewWF, "unnormalizedNewWavefunction");
 
             newWavefunctions.push_back(normalize(unnormalizedNewWF, stepSize));
-            plot(wf.grid, newWavefunctions.back(), "newWavefunction");
 
-            //wf.converged = testConvergence(wf.values, newWavefunctions.back(), stepSize);
+            wf.converged = testConvergence(wf.values, newWavefunctions.back(), stepSize);
         }
 
         allConverged = true;
@@ -218,11 +215,25 @@ int main(int argc, char** argv)
         for(auto&wf : wavefunctions)
         {
             allConverged = (allConverged && wf.converged);
+
         }
 
         for(unsigned int i=0; i<wavefunctions.size(); i++)
         {
             wavefunctions[i].values = newWavefunctions[i];
+        }
+
+
+        cout << endl << "Iteration " << counter << " results:" << endl;
+
+        for(unsigned int i=0; i<wavefunctions.size(); i++)
+        {
+            if(i%2==0)
+            {
+                cout << "n = " << wavefunctions[i].n
+                    << ", l = " << wavefunctions[i].l
+                    << " eigenvalue = " << wavefunctions[i].eigenvalue << endl;
+            }
         }
 
         counter++;

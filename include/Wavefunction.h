@@ -22,6 +22,8 @@ class Wavefunction
         unsigned int m; // angular momentum z-projection
         unsigned int Z; // charge of nucleus for the problem of interest
 
+        double eigenvalue; // calculated eigenvalue based on Hamiltonian of interest
+
         bool converged; // flag indicating whether this wavefunction's solution has converged
 };
 

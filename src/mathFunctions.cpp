@@ -136,27 +136,142 @@ Eigen::VectorXd calculateFockTerm(const Wavefunction& wf, const vector<Wavefunct
     V.push_back(0);
     W.push_back(0);
 
-    for(unsigned int i=0; i<wf.grid.size(); i++)
+    for(auto& wf_prime : wavefunctions)
     {
-        double G = 0;
-
-        for(auto& wf_prime : wavefunctions)
+        if((wf.l==0 && wf_prime.l==1) ||
+                (wf.l==1 && wf_prime.l==0))
         {
-            G += wf_prime.values(i)*wf.values(i);
+            unsigned int L = 1;
+
+            for(unsigned int i=0; i<wf.grid.size(); i++)
+            {
+                double G = pow(-0.55735,2)*wf_prime.values(i)*wf.values(i);
+
+                V.push_back(V.back() + G*pow(r(i), L));
+                W.push_back(W.back() + G/pow(r(i), L+1));
+            }
+
+            for(unsigned int i=0; i<wf.grid.size(); i++)
+            {
+                FTerm(i) = stepSize*(V[i+1]/pow(r(i),L+1) + pow(r(i),L)*(W[wf.grid.size()]-W[i+1]));
+            }
         }
 
-        V.push_back(V.back() + G);
-        //V.push_back(V.back() + G*r(i));
-        W.push_back(W.back() + G/r(i));
-    }
+        if(wf.l==0 && wf_prime.l==0)
+        {
+            unsigned int L = 0;
 
-    //for(unsigned int L=0; L<
-    for(unsigned int i=0; i<wf.grid.size(); i++)
-    {
-        FTerm(i) = stepSize*(V[i+1]/r(i) + (W[wf.grid.size()]-W[i+1]));
-        //FTerm(i) = stepSize*(V[i+1]/r(i) + r(i)*(W[wf.grid.size()]-W[i+1]));
-        FTerm(i) = FTerm(i)*wf.values(i);
+            for(unsigned int i=0; i<wf.grid.size(); i++)
+            {
+                double G = wf_prime.values(i)*wf.values(i);
+
+                V.push_back(V.back() + G*pow(r(i), L));
+                W.push_back(W.back() + G/pow(r(i), L+1));
+            }
+
+            for(unsigned int i=0; i<wf.grid.size(); i++)
+            {
+                FTerm(i) = stepSize*(V[i+1]/pow(r(i),L+1) + pow(r(i),L)*(W[wf.grid.size()]-W[i+1]));
+            }
+        }
+
+        if(wf.l==1 && wf_prime.l==1)
+        {
+            for(unsigned int L=0; L<=2; L++)
+            {
+                for(unsigned int i=0; i<wf.grid.size(); i++)
+                {
+                    double G = wf_prime.values(i)*wf.values(i);
+
+                    V.push_back(V.back() + G*pow(r(i), L));
+                    W.push_back(W.back() + G/pow(r(i), L+1));
+                }
+
+                for(unsigned int i=0; i<wf.grid.size(); i++)
+                {
+                    FTerm(i) += stepSize*(V[i+1]/pow(r(i),L+1) + pow(r(i),L)*(W[wf.grid.size()]-W[i+1]));
+                }
+            }
+        }
+
+        for(unsigned int i=0; i<wf.grid.size(); i++)
+        {
+            FTerm(i) += FTerm(i)*wf_prime.values(i);
+        }
     }
 
     return FTerm;
+}
+
+Eigen::VectorXd solveTridiagonalMatrix(const Wavefunction& wf, const vector<Wavefunction>& wavefunctions, const Eigen::VectorXd& Y, const double eigenvalue)
+{
+    unsigned int n = wf.values.size();
+
+    Eigen::VectorXd U = Eigen::VectorXd(n, 1);
+    Eigen::VectorXd V = Eigen::VectorXd(n, 1);
+    Eigen::VectorXd X = Eigen::VectorXd(n, 1);
+
+    Eigen::VectorXd grid_r(n, 1);
+    for(unsigned int i=0; i<n; i++)
+    {
+        grid_r(i) = exp(wf.grid(i));
+    }
+
+    double stepSize = wf.grid(1)-wf.grid(0);
+
+    Eigen::VectorXd HartreeTerm = calculateHartreeTerm(wf, wavefunctions);
+    for(unsigned int i=0; i<n; i++)
+    {
+        HartreeTerm(i) = HartreeTerm(i)/wf.values(i);
+    }
+
+    Eigen::VectorXd A = Eigen::VectorXd(n, 1);
+    Eigen::VectorXd B = Eigen::VectorXd(n, 1);
+
+    for(unsigned int i=1; i<n-1; i++)
+    {
+        A(i) = -2/pow(grid_r(i),2);
+        B(i) = 1/(grid_r(i)*grid_r(i+1));
+
+        A(i) /= pow(stepSize,2);
+        B(i) /= pow(stepSize,2);
+
+        A(i) -= pow(wf.l+0.5,2)/pow(grid_r(i),2);
+        A(i) *= -0.5;
+        B(i) *= -0.5;
+
+        A(i) += (-(wf.Z/grid_r(i)));
+
+        A(i) += HartreeTerm(i);
+        A(i) -= eigenvalue;
+    }
+
+    A(0) = A(1);
+    A(n-1) = A(n-2);
+
+    B(0) = B(1);
+    B(n-1) = B(n-2);
+
+    U(n-1) = A(n-1);
+
+    for(int i=n-2; i>=0; i--)
+    {
+        U(i) = A(i) - pow(B(i),2)/U(i+1);
+    }
+
+    V(n-1) = Y(n-1)/U(n-1);
+
+    for(int i=n-2; i>=0; i--)
+    {
+        V(i) = (Y(i)-B(i)*V(i+1))/U(i);
+    }
+
+    X(0) = V(0);
+
+    for(int i=1; i<n; i++)
+    {
+        X(i) = V(i)-(B(i-1)/U(i))*X(i-1);
+    }
+
+    return X;
 }
