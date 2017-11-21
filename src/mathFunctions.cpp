@@ -130,18 +130,20 @@ Eigen::VectorXd calculateFockTerm(const Wavefunction& wf, const vector<Wavefunct
 
     double stepSize = wf.grid(1)-wf.grid(0);
 
-    vector<double> V;
-    vector<double> W;
-
-    V.push_back(0);
-    W.push_back(0);
-
     for(auto& wf_prime : wavefunctions)
     {
+        vector<double> F(wf.grid.size());
+
         if((wf.l==0 && wf_prime.l==1) ||
                 (wf.l==1 && wf_prime.l==0))
         {
             unsigned int L = 1;
+
+            vector<double> V;
+            vector<double> W;
+
+            V.push_back(0);
+            W.push_back(0);
 
             for(unsigned int i=0; i<wf.grid.size(); i++)
             {
@@ -153,13 +155,19 @@ Eigen::VectorXd calculateFockTerm(const Wavefunction& wf, const vector<Wavefunct
 
             for(unsigned int i=0; i<wf.grid.size(); i++)
             {
-                FTerm(i) = stepSize*(V[i+1]/pow(r(i),L+1) + pow(r(i),L)*(W[wf.grid.size()]-W[i+1]));
+                F[i] = stepSize*(V[i+1]/pow(r(i),L+1) + pow(r(i),L)*(W[wf.grid.size()]-W[i+1]));
             }
         }
 
         if(wf.l==0 && wf_prime.l==0)
         {
             unsigned int L = 0;
+
+            vector<double> V;
+            vector<double> W;
+
+            V.push_back(0);
+            W.push_back(0);
 
             for(unsigned int i=0; i<wf.grid.size(); i++)
             {
@@ -171,7 +179,7 @@ Eigen::VectorXd calculateFockTerm(const Wavefunction& wf, const vector<Wavefunct
 
             for(unsigned int i=0; i<wf.grid.size(); i++)
             {
-                FTerm(i) = stepSize*(V[i+1]/pow(r(i),L+1) + pow(r(i),L)*(W[wf.grid.size()]-W[i+1]));
+                F[i] = stepSize*(V[i+1]/pow(r(i),L+1) + pow(r(i),L)*(W[wf.grid.size()]-W[i+1]));
             }
         }
 
@@ -179,6 +187,12 @@ Eigen::VectorXd calculateFockTerm(const Wavefunction& wf, const vector<Wavefunct
         {
             for(unsigned int L=0; L<=2; L++)
             {
+                vector<double> V;
+                vector<double> W;
+
+                V.push_back(0);
+                W.push_back(0);
+
                 for(unsigned int i=0; i<wf.grid.size(); i++)
                 {
                     double G = wf_prime.values(i)*wf.values(i);
@@ -189,14 +203,14 @@ Eigen::VectorXd calculateFockTerm(const Wavefunction& wf, const vector<Wavefunct
 
                 for(unsigned int i=0; i<wf.grid.size(); i++)
                 {
-                    FTerm(i) += stepSize*(V[i+1]/pow(r(i),L+1) + pow(r(i),L)*(W[wf.grid.size()]-W[i+1]));
+                    F[i] += stepSize*(V[i+1]/pow(r(i),L+1) + pow(r(i),L)*(W[wf.grid.size()]-W[i+1]));
                 }
             }
         }
 
         for(unsigned int i=0; i<wf.grid.size(); i++)
         {
-            FTerm(i) += FTerm(i)*wf_prime.values(i);
+            FTerm(i) = F[i]*wf_prime.values(i);
         }
     }
 

@@ -163,7 +163,7 @@ int main(int argc, char** argv)
     bool allConverged = false;
 
     // iterate wavefunctions until they converge
-    while(!allConverged)
+    while(counter < 10)
     {
         // plot initial wavefunctions
         for(unsigned int i=0; i<wavefunctions.size(); i += 2)
@@ -193,8 +193,8 @@ int main(int argc, char** argv)
 
             wf.eigenvalue = KEValue + EPValue + HValue - FValue;
 
-            cout << "KEValue = " << KEValue << ", EPValue = " << EPValue
-                 << ", HValue = " << HValue << ", FValue = " << FValue << endl;
+            //cout << "KEValue = " << KEValue << ", EPValue = " << EPValue
+            //     << ", HValue = " << HValue << ", FValue = " << FValue << endl;
 
             if(wf.eigenvalue>0)
             {
@@ -203,11 +203,9 @@ int main(int argc, char** argv)
 
             Eigen::VectorXd unnormalizedNewWF = solveTridiagonalMatrix(wf, wavefunctions, FockTerm, wf.eigenvalue);
 
-            //plot(wf.grid, unnormalizedNewWF, "unnormalizedNewWavefunction");
-
             newWavefunctions.push_back(normalize(unnormalizedNewWF, stepSize));
 
-            wf.converged = testConvergence(wf.values, newWavefunctions.back(), stepSize);
+            //wf.converged = testConvergence(wf.values, newWavefunctions.back(), stepSize);
         }
 
         allConverged = true;
